@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx:*)",
+      "Bash(mv:*)",
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run:*)",
+      "Bash(claude mcp:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(rm:*)",
+      "Bash(git remote:*)",
+      "WebSearch",
+      "WebFetch(domain:openrouter.ai)",
+      "Bash(git reset:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}
