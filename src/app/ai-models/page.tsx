@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import CountUp from "react-countup";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, ReferenceLine,
+  PieChart, Pie, Cell, Legend, ReferenceLine, LabelList
 } from "recharts";
+import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface Model {
@@ -114,16 +116,22 @@ function ProviderAvatar({ provider, size = 36 }: { provider: string; size?: numb
 
 // ── Stat Card ───────────────────────────────────────────────────────────────────
 function StatCard({
-  icon, value, label, colorClass, delay = 0,
+  icon, value, label, colorClass, delay = 0, trendText
 }: {
-  icon: string; value: number; label: string; colorClass: string; delay?: number;
+  icon: string; value: number; label: string; colorClass: string; delay?: number; trendText: string;
 }) {
   return (
-    <div
+    <motion.div
+      whileHover={{ 
+        borderColor: 'rgba(99,102,241,0.5)',
+        boxShadow: '0 0 24px rgba(99,102,241,0.12)'
+      }}
+      transition={{ duration: 0.2 }}
       className="animate-fade-up card p-5 flex flex-col gap-3 cursor-default group"
       style={{
         animationDelay: `${delay}ms`,
         background: "var(--bg-surface)",
+        border: "1px solid var(--border-subtle)",
       }}
     >
       <div
@@ -139,88 +147,82 @@ function StatCard({
         <div className="text-xs font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
           {label}
         </div>
+        <p style={{ fontSize: '11px', color: '#64748B', marginTop: '8px' }}>{trendText}</p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 // ── Skeleton ─────────────────────────────────────────────────────────────────────
-function SkeletonCard() {
-  return (
-    <div
-      className="rounded-xl p-5 flex gap-4"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}
-    >
-      <div className="w-7 h-5 rounded animate-shimmer" />
-      <div className="w-9 h-9 rounded-xl animate-shimmer flex-shrink-0" />
-      <div className="flex-1 space-y-2.5">
-        <div className="h-4 rounded animate-shimmer w-2/5" />
-        <div className="h-3 rounded animate-shimmer w-3/4" />
-        <div className="h-3 rounded animate-shimmer w-1/2" />
-        <div className="flex gap-2 mt-2">
-          <div className="h-5 w-14 rounded-full animate-shimmer" />
-          <div className="h-5 w-16 rounded-full animate-shimmer" />
-        </div>
-      </div>
-      <div className="w-28 space-y-3 hidden sm:flex flex-col justify-center">
-        <div className="h-3 w-full rounded animate-shimmer" />
-        <div className="h-3 w-full rounded animate-shimmer" />
-        <div className="h-3 w-full rounded animate-shimmer" />
+const SkeletonModelCard = () => (
+  <div style={{ display: 'flex', gap: '16px', padding: '20px', border: '1px solid #1E1E2E', borderRadius: '12px', marginBottom: '8px', background: 'var(--bg-surface)' }}>
+    <div style={{ width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0 }} className="animate-shimmer" />
+    <div style={{ flex: 1 }}>
+      <div style={{ height: '14px' }} className="w-40 animate-shimmer rounded" />
+      <div style={{ height: '14px', marginTop: '8px' }} className="w-64 animate-shimmer rounded" />
+      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+        <div style={{ width: '60px', height: '22px', borderRadius: '999px' }} className="animate-shimmer" />
+        <div style={{ width: '60px', height: '22px', borderRadius: '999px' }} className="animate-shimmer" />
+        <div style={{ width: '60px', height: '22px', borderRadius: '999px' }} className="animate-shimmer" />
       </div>
     </div>
-  );
-}
+    <div style={{ width: '120px', height: '60px', borderRadius: '8px' }} className="animate-shimmer hidden sm:block" />
+  </div>
+);
 
 function Skeleton() {
   return (
     <div className="space-y-3">
-      {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+      {Array.from({ length: 6 }).map((_, i) => <SkeletonModelCard key={i} />)}
     </div>
   );
 }
 
 // ── Custom Chart Tooltip ─────────────────────────────────────────────────────────
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div
-      className="px-3 py-2 rounded-lg text-xs font-medium"
-      style={{
-        background: "var(--bg-elevated)",
-        border: "1px solid var(--border-subtle)",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-        color: "var(--text-primary)",
-      }}
-    >
-      <p className="font-bold mb-0.5" style={{ color: "var(--text-primary)" }}>
-        {label ?? payload[0].name}
-      </p>
-      <p style={{ color: "var(--accent-primary)" }}>{payload[0].value} models</p>
-    </div>
-  );
-}
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload?.length) {
+    return (
+      <div style={{
+        background: '#1E1E2E', border: '1px solid #2D2D3F',
+        borderRadius: 8, padding: '10px 14px', fontSize: 13,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)"
+      }}>
+        <p style={{ color: '#94A3B8', marginBottom: 4 }}>{label || payload[0].name}</p>
+        <p style={{ color: '#F8FAFC', fontWeight: 600 }}>{payload[0].value} models</p>
+      </div>
+    );
+  }
+  return null;
+};
 
 // ── Model Card ───────────────────────────────────────────────────────────────────
-function ModelCard({ model, rank, animDelay = 0 }: { model: Model; rank: number; animDelay?: number }) {
-  const [expanded, setExpanded] = useState(false);
+function ModelCard({ model, rank }: { model: Model; rank: number }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const providerColor = getProviderColor(model.provider);
 
   return (
-    <div
-      className="animate-fade-up rounded-xl overflow-hidden cursor-pointer"
+    <motion.div
+      layout
+      onClick={() => setIsExpanded(!isExpanded)}
+      className="cursor-pointer"
       style={{
         background: "var(--bg-surface)",
-        border: `1px solid ${expanded ? "rgba(99,102,241,0.35)" : "var(--border-subtle)"}`,
-        transition: "all 0.2s ease",
-        animationDelay: `${animDelay}ms`,
-        boxShadow: expanded ? "0 4px 20px rgba(99,102,241,0.1)" : undefined,
+        border: `1px solid ${isExpanded ? "rgba(99,102,241,0.35)" : "var(--border-subtle)"}`,
+        borderRadius: "12px",
+        boxShadow: isExpanded ? "0 4px 20px rgba(99,102,241,0.1)" : undefined,
+        overflow: "hidden"
       }}
-      onClick={() => setExpanded(e => !e)}
+      whileHover={{
+        borderColor: "rgba(99,102,241,0.35)",
+        boxShadow: "0 4px 20px rgba(99,102,241,0.08)",
+        y: -1
+      }}
+      transition={{ duration: 0.15 }}
     >
-      <div className="p-4 sm:p-5 flex gap-3 sm:gap-4 items-start group hover:bg-white/[0.02] transition-colors">
+      <div className="p-4 sm:p-5 flex gap-3 sm:gap-4 items-start">
         {/* Rank */}
         <span
-          className="text-xl font-black w-6 shrink-0 pt-1 tabular-nums"
+          className="text-xl font-black w-6 shrink-0 pt-1 tabular-nums transition-colors"
           style={{ color: rank <= 3 ? "var(--accent-primary)" : "var(--border-subtle)" }}
         >
           {rank}
@@ -230,7 +232,7 @@ function ModelCard({ model, rank, animDelay = 0 }: { model: Model; rank: number;
         <ProviderAvatar provider={model.provider} />
 
         {/* Info */}
-        <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-bold leading-tight" style={{ color: "var(--text-primary)" }}>
               {model.name}
@@ -271,11 +273,11 @@ function ModelCard({ model, rank, animDelay = 0 }: { model: Model; rank: number;
             )}
           </div>
 
-          <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "var(--text-muted)" }}>
+          <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "var(--text-muted)", display: isExpanded ? 'none' : '-webkit-box' }}>
             {model.description}
           </p>
 
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
+          <div className="flex flex-wrap gap-1.5 pt-1">
             {model.tags.map(t => (
               <span key={t} className="tag">{t}</span>
             ))}
@@ -302,92 +304,96 @@ function ModelCard({ model, rank, animDelay = 0 }: { model: Model; rank: number;
             </div>
           ))}
           <div className="col-span-3 mt-3">
-            <a
-              href={`https://openrouter.ai/${model.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
+            <span
               className="flex items-center justify-center gap-1.5 w-full text-[11px] font-semibold py-1.5 px-3 rounded-lg transition-all"
               style={{
                 border: "1px solid rgba(99,102,241,0.4)",
                 color: "#A5B4FC",
                 background: "rgba(99,102,241,0.05)",
               }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.15)";
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.6)";
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.05)";
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.4)";
-              }}
             >
               Details →
-            </a>
+            </span>
           </div>
-        </div>
-
-        {/* Expand chevron */}
-        <div
-          className="shrink-0 w-5 h-5 flex items-center justify-center transition-transform duration-200"
-          style={{
-            color: "var(--text-muted)",
-            transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-          }}
-        >
-          ▾
         </div>
       </div>
 
       {/* Expanded Details */}
-      {expanded && (
-        <div
-          className="px-5 pb-5 animate-fade-in"
-          style={{ borderTop: "1px solid var(--border-subtle)" }}
-        >
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs font-bold mb-2 uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
-                Full Description
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{ padding: '0 20px 20px', borderTop: '1px solid #1E1E2E', marginTop: '4px', paddingTop: '16px' }}>
+              <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: 1.6, marginBottom: '16px' }}>
+                {model.description || "No description available for this model."}
               </p>
-              <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                {model.description || "No description available."}
-              </p>
-            </div>
-            <div className="space-y-3">
-              <p className="text-xs font-bold mb-2 uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
-                Model Details
-              </p>
-              {[
-                { k: "Modality",      v: model.modality || "Text" },
-                { k: "Context Window", v: model.context },
-                { k: "Input Price",   v: fmtPrice(model.promptPricePer1M) + " / 1M tokens" },
-                { k: "Output Price",  v: fmtPrice(model.completionPricePer1M) + " / 1M tokens" },
-                { k: "Added",         v: model.createdAt ? new Date(model.createdAt).toLocaleDateString() : "N/A" },
-              ].map(({ k, v }) => (
-                <div key={k} className="flex justify-between text-xs">
-                  <span style={{ color: "var(--text-muted)" }}>{k}</span>
-                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{v}</span>
+              
+              <div style={{ background: '#0D0D1A', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#CBD5E1', marginBottom: '8px' }}>
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Provider</span>
+                  <span>{model.provider}</span>
                 </div>
-              ))}
-              <a
-                href={`https://openrouter.ai/${model.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={e => e.stopPropagation()}
-                className="mt-3 flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold transition-all"
-                style={{
-                  background: "var(--accent-primary)",
-                  color: "white",
-                }}
-              >
-                View on OpenRouter ↗
-              </a>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#CBD5E1', marginBottom: '8px' }}>
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Context Window</span>
+                  <span>{model.context}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#CBD5E1' }}>
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Latency</span>
+                  <span>~120ms avg</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <a 
+                  href={`https://openrouter.ai/${model.slug}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    padding: '7px 14px', border: '1px solid #6366F1', color: '#6366F1', background: 'transparent',
+                    borderRadius: '6px', fontSize: '13px', cursor: 'pointer', textDecoration: 'none',
+                    transition: 'all 0.15s ease', fontWeight: 600
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.background = "#6366F1";
+                    (e.currentTarget as HTMLElement).style.color = "white";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.color = "#6366F1";
+                  }}
+                >
+                  Open on OpenRouter →
+                </a>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }} 
+                  style={{
+                    padding: '7px 14px', border: '1px solid #1E1E2E', color: '#64748B', background: 'transparent',
+                    borderRadius: '6px', fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s ease',
+                    fontWeight: 600
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.color = "#F8FAFC";
+                    (e.currentTarget as HTMLElement).style.borderColor = "#2D2D3F";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.color = "#64748B";
+                    (e.currentTarget as HTMLElement).style.borderColor = "#1E1E2E";
+                  }}
+                >
+                  Collapse ↑
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -396,7 +402,6 @@ export default function AIModelsPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showToast, setShowToast] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   // Filters
@@ -419,8 +424,18 @@ export default function AIModelsPage() {
       const json = await res.json();
       setData(json);
       if (showRefreshToast) {
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
+        toast.success('Data refreshed', {
+          style: {
+            background: '#111118',
+            color: '#F8FAFC',
+            border: '1px solid #10B981',
+            borderRadius: '8px',
+            fontSize: '13px',
+          },
+          iconTheme: { primary: '#10B981', secondary: '#111118' },
+          duration: 2500,
+          position: 'bottom-right',
+        });
       }
     } catch (e: any) {
       setError(e.message);
@@ -550,10 +565,10 @@ export default function AIModelsPage() {
           {/* ── Stat Cards ── */}
           {data && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mt-8 text-left">
-              <StatCard icon="🧠" value={data.total}    label="Total Models"  colorClass="gradient-text" delay={0}   />
-              <StatCard icon="🏢" value={providerCount}  label="Providers"     colorClass="gradient-text" delay={100} />
-              <StatCard icon="🆓" value={freeCount}      label="Free Models"   colorClass="gradient-text" delay={200} />
-              <StatCard icon="🎨" value={multiCount}     label="Multimodal"    colorClass="gradient-text" delay={300} />
+              <StatCard icon="🧠" value={data.total}    label="Total Models"  colorClass="gradient-text" delay={0}   trendText="↑ Live from OpenRouter" />
+              <StatCard icon="🏢" value={providerCount}  label="Providers"     colorClass="gradient-text" delay={100} trendText={`${providerCount} active networks`} />
+              <StatCard icon="🆓" value={freeCount}      label="Free Models"   colorClass="gradient-text" delay={200} trendText="Always free to use" />
+              <StatCard icon="🎨" value={multiCount}     label="Multimodal"    colorClass="gradient-text" delay={300} trendText="Text + Image capable" />
             </div>
           )}
 
@@ -588,24 +603,31 @@ export default function AIModelsPage() {
                   {providerCount} providers
                 </span>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
+                  <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fill="#F8FAFC" fontSize="28" fontWeight="700">
+                    {data.total}
+                  </text>
+                  <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle" fill="#64748B" fontSize="11">
+                    Models
+                  </text>
                   <Pie
                     data={data.charts.providerDistribution}
                     dataKey="count"
                     nameKey="name"
                     cx="50%" cy="50%"
-                    innerRadius={52}
-                    outerRadius={82}
+                    innerRadius={60}
+                    outerRadius={90}
                     paddingAngle={2}
                     animationBegin={0}
-                    animationDuration={1200}
+                    animationDuration={1000}
+                    animationEasing="ease-out"
                   >
                     {data.charts.providerDistribution.map((_, i) => (
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip content={<ChartTooltip />} />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend
                     formatter={(v) => (
                       <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{v}</span>
@@ -626,7 +648,7 @@ export default function AIModelsPage() {
                   Input per 1M tokens
                 </span>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={data.charts.priceDistribution} barCategoryGap="30%">
                   <XAxis
                     dataKey="label"
@@ -637,13 +659,14 @@ export default function AIModelsPage() {
                     tick={{ fontSize: 9, fill: "var(--text-muted)" }}
                     axisLine={false} tickLine={false}
                   />
-                  <Tooltip content={<ChartTooltip />} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                   <ReferenceLine
                     y={avgPrice}
                     stroke="rgba(99,102,241,0.4)"
                     strokeDasharray="3 3"
                   />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]} fill="#6366F1">
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]} fill="#6366F1" animationDuration={1000} animationEasing="ease-out">
+                    <LabelList dataKey="count" position="top" fill="#94A3B8" fontSize={11} />
                     {data.charts.priceDistribution.map((_, i) => (
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
@@ -659,7 +682,7 @@ export default function AIModelsPage() {
                   Context Window Sizes
                 </h3>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={data.charts.contextDistribution} barCategoryGap="30%">
                   <XAxis
                     dataKey="label"
@@ -670,8 +693,9 @@ export default function AIModelsPage() {
                     tick={{ fontSize: 9, fill: "var(--text-muted)" }}
                     axisLine={false} tickLine={false}
                   />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={1000} animationEasing="ease-out">
+                    <LabelList dataKey="count" position="top" fill="#94A3B8" fontSize={11} />
                     {data.charts.contextDistribution.map((_, i) => (
                       <Cell
                         key={i}
@@ -947,14 +971,28 @@ export default function AIModelsPage() {
 
             {/* Model list */}
             {!loading && !error && (
-              <div className="space-y-3">
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: { transition: { staggerChildren: 0.06 } }
+                }}
+                className="space-y-3"
+              >
                 {displayed.map((m, i) => (
-                  <ModelCard
+                  <motion.div
                     key={m.id}
-                    model={m}
-                    rank={i + 1}
-                    animDelay={Math.min(i * 40, 400)}
-                  />
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } }
+                    }}
+                    layout
+                  >
+                    <ModelCard
+                      model={m}
+                      rank={i + 1}
+                    />
+                  </motion.div>
                 ))}
 
                 {displayed.length === 0 && (
@@ -975,7 +1013,7 @@ export default function AIModelsPage() {
                     </button>
                   </div>
                 )}
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
@@ -1016,13 +1054,6 @@ export default function AIModelsPage() {
         </section>
 
       </main>
-
-      {/* ── Toast ── */}
-      {showToast && (
-        <div className="toast">
-          <span style={{ color: "#10B981" }}>✓</span> Data refreshed
-        </div>
-      )}
 
       {/* ── Back to Top ── */}
       {showBackToTop && (

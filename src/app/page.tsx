@@ -1,9 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { UseCaseSearchBox } from "@/components/search/UseCaseSearchBox";
 import { ToolCard } from "@/components/tools/ToolCard";
 import { ToolRecommendation } from "@/lib/openrouter";
+
+const PROVIDER_COLORS: Record<string, string> = {
+  Anthropic: "#E97D3A",
+  OpenAI:    "#10A37F",
+  Google:    "#4285F4",
+  Meta:      "#0082FB",
+  DeepSeek:  "#06B6D4",
+  Mistral:   "#F59E0B",
+  Cohere:    "#DE3163",
+  Amazon:    "#FF9900",
+};
 
 interface SearchResults {
   recommendations: ToolRecommendation[];
@@ -28,6 +40,18 @@ const FEATURED_MODELS = [
 
 export default function Home() {
   const [results, setResults] = useState<SearchResults | null>(null);
+  const [top5Models, setTop5Models] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/ai-models")
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.trending) {
+          setTop5Models(d.trending.slice(0, 5));
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const handleResults = (newResults: SearchResults | null) => {
     setResults(newResults);
@@ -227,38 +251,27 @@ export default function Home() {
               </div>
             </section>
 
-            {/* Category browser */}
-            <section className="animate-fade-up stagger-5">
-              <div className="text-center mb-5">
-                <h2 className="text-lg font-semibold" style={{ color: "var(--text-secondary)" }}>
-                  Or browse AI tools by category
-                </h2>
-                <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-                  Explore applications manually
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {["Coding", "Writing", "Presentations", "Image Gen", "Video", "Research", "Social Media", "Automation"].map((cat) => (
-                  <div
-                    key={cat}
-                    className="flex flex-col items-center justify-center p-5 rounded-xl transition-all cursor-not-allowed"
-                    style={{
-                      background: "var(--bg-surface)",
-                      border: "1px solid var(--border-subtle)",
-                    }}
-                  >
-                    <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{cat}</span>
-                    <span className="text-[10px] mt-1 px-2 py-0.5 rounded-full"
-                      style={{
-                        background: "var(--border-subtle)",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      Coming soon
+            {/* Category browser / Live Leaderboard */}
+            <section className="trending-section animate-fade-up stagger-5" style={{ marginTop: '48px' }}>
+              <h3 className="section-label" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#64748B', textTransform: 'uppercase', marginBottom: '16px' }}>
+                Trending Right Now
+              </h3>
+              <div className="trending-row" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {top5Models.length > 0 ? top5Models.map((model, i) => (
+                  <Link href="/ai-models" key={model.id} className="trending-chip hover:scale-105 transition-transform" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#111118', border: '1px solid #1E1E2E', borderRadius: '10px', padding: '10px 14px', flex: '1 1 min-content' }}>
+                    <span className="trending-rank" style={{ color: 'var(--accent-primary)', fontWeight: 800, fontSize: '13px' }}>#{i + 1}</span>
+                    <span className="trending-avatar" style={{ background: PROVIDER_COLORS[model.provider] || '#6366F1', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', color: 'white' }}>
+                      {model.provider.substring(0, 2).toUpperCase()}
                     </span>
-                  </div>
-                ))}
+                    <div style={{ minWidth: '100px' }}>
+                      <p className="trending-name truncate max-w-[120px]" style={{ fontSize: '13px', fontWeight: 600, color: '#F8FAFC', marginBottom: '2px' }}>{model.name}</p>
+                      <p className="trending-provider" style={{ fontSize: '10px', color: '#64748B' }}>{model.provider}</p>
+                    </div>
+                  </Link>
+                )) : (
+                  <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading live models...</div>
+                )}
               </div>
             </section>
           </div>
